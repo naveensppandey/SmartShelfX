@@ -1,0 +1,90 @@
+<div class="profile-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">User Profile & Account</h1>
+      <p class="page-subtitle">Your credentials, system permissions, and active session details</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-outline" (click)="fetchProfile()">↻ Refresh</button>
+      <button class="btn btn-danger" (click)="logout()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="profile-grid">
+    <!-- User Overview Card -->
+    <div class="card profile-card">
+      <div class="avatar-circle">
+        {{ currentUser?.fullName?.charAt(0) || currentUser?.username?.charAt(0) || 'U' }}
+      </div>
+
+      <h2 class="user-name">{{ currentUser?.fullName || profile?.fullName || 'User' }}</h2>
+      <p class="user-handle">@{{ currentUser?.username || profile?.username }}</p>
+
+      <span class="role-badge" [class]="'badge-' + (currentUser?.role?.toLowerCase() || 'admin')">
+        {{ currentUser?.role }}
+      </span>
+
+      <div class="divider"></div>
+
+      <div class="info-list">
+        <div class="info-item">
+          <span class="info-label">Email Address</span>
+          <span class="info-value">{{ currentUser?.email || profile?.email || 'N/A' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Account ID</span>
+          <span class="info-value">#{{ currentUser?.id || profile?.id }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Status</span>
+          <span class="info-value active-status">● Active & Verified</span>
+        </div>
+        <div class="info-item" *ngIf="profile?.createdAt">
+          <span class="info-label">Member Since</span>
+          <span class="info-value">{{ profile?.createdAt | date: 'mediumDate' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Permissions and Security Card -->
+    <div class="card details-card">
+      <div class="section-block">
+        <h3>Role Capabilities</h3>
+        <p class="section-desc">
+          Permissions assigned to the <strong>{{ currentUser?.role }}</strong> role:
+        </p>
+
+        <ul class="permission-list">
+          <li *ngFor="let perm of getRolePermissions()">
+            <span class="check-icon">✓</span>
+            {{ perm }}
+          </li>
+        </ul>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="section-block">
+        <h3>Security & Session</h3>
+        <div class="security-meta">
+          <div class="meta-row">
+            <span class="label">Authentication Type:</span>
+            <span class="value">JSON Web Token (JWT) Bearer</span>
+          </div>
+          <div class="meta-row">
+            <span class="label">Token Expiration:</span>
+            <span class="value">24 Hours (Rolling renewal on login)</span>
+          </div>
+          <div class="meta-row">
+            <span class="label">Password Encryption:</span>
+            <span class="value">BCrypt Salted Hash (10 rounds)</span>
+          </div>
+          <div class="meta-row">
+            <span class="label">API Security:</span>
+            <span class="value">Stateless Spring Security Filter Chain</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

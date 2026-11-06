@@ -1,0 +1,186 @@
+<div class="transactions-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Stock Movements & Audit Log</h1>
+      <p class="page-subtitle">Track every physical unit addition (Stock-In) and deduction (Stock-Out) with user attribution</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-emerald" (click)="openRecordModal('IN')">+ Stock In (Receive)</button>
+      <button class="btn btn-amber" (click)="openRecordModal('OUT')">- Stock Out (Dispatch)</button>
+    </div>
+  </div>
+
+  <!-- Success/Error Alerts -->
+  <div class="alert success" *ngIf="successMessage">
+    ✅ {{ successMessage }}
+  </div>
+  <div class="alert error" *ngIf="errorMessage && !showModal">
+    ⚠️ {{ errorMessage }}
+  </div>
+
+  <!-- Filters Toolbar -->
+  <div class="filter-card">
+    <div class="filter-group">
+      <label>Search Movements</label>
+      <input type="text" [(ngModel)]="searchKeyword" placeholder="Filter by product name or SKU..." />
+    </div>
+
+    <div class="filter-group">
+      <label>Movement Type</label>
+      <select [(ngModel)]="filterType">
+        <option value="ALL">All Movements (IN & OUT)</option>
+        <option value="IN">Stock In (Receipts)</option>
+        <option value="OUT">Stock Out (Dispatches)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading transaction audit log from MySQL...</p>
+  </div>
+
+  <!-- Transactions Table Card -->
+  <div class="table-card" *ngIf="!loading">
+    <div class="table-responsive" *ngIf="filteredTransactions.length > 0; else noTransactions">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Tx ID</th>
+            <th>Product Name</th>
+            <th>SKU</th>
+            <th>Type</th>
+            <th>Quantity</th>
+            <th>Balance Change</th>
+            <th>Handled By</th>
+            <th>Notes / Reference</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let tx of filteredTransactions">
+            <td class="text-muted">#{{ tx.id }}</td>
+            <td class="font-bold">{{ tx.productName }}</td>
+            <td><code>{{ tx.productSku }}</code></td>
+            <td>
+              <span class="type-pill" [class.in]="tx.transactionType === 'IN'" [class.out]="tx.transactionType === 'OUT'">
+                {{ tx.transactionType === 'IN' ? '▲ STOCK IN' : '▼ STOCK OUT' }}
+              </span>
+            </td>
+            <td class="font-bold" [class.text-emerald]="tx.transactionType === 'IN'" [class.text-amber]="tx.transactionType === 'OUT'">
+              {{ tx.transactionType === 'IN' ? '+' : '-' }}{{ tx.quantity }}
+            </td>
+            <td>
+              <div class="balance-flow">
+                <span class="prev">{{ tx.previousStock }}</span>
+                <span class="arrow">→</span>
+                <span class="next font-bold">{{ tx.newStock }}</span>
+              </div>
+            </td>
+            <td><span class="user-pill">{{ tx.userName || 'System' }}</span></td>
+            <td class="text-notes">{{ tx.notes || '—' }}</td>
+            <td class="text-muted">{{ tx.transactionDate | date:'medium' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #noTransactions>
+      <div class="empty-state">
+        <span class="empty-icon">🔄</span>
+        <h3>No Stock Transactions Found</h3>
+        <p>No inventory movements have been recorded matching your criteria.</p>
+        <button class="btn btn-primary" (click)="openRecordModal('IN')">Record Initial Stock In</button>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Record Stock Movement Modal Dialog -->
+  <div class="modal-backdrop" *ngIf="showModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Record Stock Movement</h3>
+        <button class="close-btn" (click)="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="alert error" *ngIf="errorMessage">
+          ⚠️ {{ errorMessage }}
+        </div>
+
+        <div class="form-group">
+          <label>Movement Type *</label>
+          <div class="type-selector">
+            <button
+              type="button"
+              class="selector-btn in"
+              [class.active]="selectedType === 'IN'"
+              (click)="selectedType = 'IN'"
+            >
+              ▲ Stock In (Replenish / Receive)
+            </button>
+            <button
+              type="button"
+              class="selector-btn out"
+              [class.active]="selectedType === 'OUT'"
+              (click)="selectedType = 'OUT'"
+            >
+              ▼ Stock Out (Dispatch / Sale)
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 14px;">
+          <label>Target Product *</label>
+          <select [(ngModel)]="selectedProductId">
+            <option *ngFor="let p of products" [ngValue]="p.id">
+              {{ p.name }} (SKU: {{ p.sku }}) — Current: {{ p.currentStock }} {{ p.unit }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-top: 14px;">
+          <label>Quantity to Move *</label>
+          <input type="number" [(ngModel)]="quantity" min="1" placeholder="10" />
+        </div>
+
+        <!-- Real-time Preview Calculation -->
+        <div class="preview-box" *ngIf="getSelectedProduct()">
+          <div class="preview-line">
+            <span>Current Balance:</span>
+            <strong>{{ getSelectedProduct()?.currentStock }} {{ getSelectedProduct()?.unit }}</strong>
+          </div>
+          <div class="preview-line">
+            <span>Movement:</span>
+            <strong [class.text-emerald]="selectedType === 'IN'" [class.text-amber]="selectedType === 'OUT'">
+              {{ selectedType === 'IN' ? '+' : '-' }}{{ quantity }} {{ getSelectedProduct()?.unit }}
+            </strong>
+          </div>
+          <div class="preview-divider"></div>
+          <div class="preview-line final">
+            <span>Resulting Warehouse Balance:</span>
+            <strong [class.text-danger]="getPreviewStock() < 0">{{ getPreviewStock() }} {{ getSelectedProduct()?.unit }}</strong>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 14px;">
+          <label>Audit Notes / Invoice Reference</label>
+          <input type="text" [(ngModel)]="notes" placeholder="e.g. Supplier delivery order #4820 or order fulfillment" />
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeModal()" [disabled]="submitting">Cancel</button>
+        <button
+          class="btn btn-primary"
+          (click)="onSubmit()"
+          [disabled]="submitting || getPreviewStock() < 0"
+        >
+          <span *ngIf="!submitting">Submit Transaction</span>
+          <span *ngIf="submitting">Recording...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

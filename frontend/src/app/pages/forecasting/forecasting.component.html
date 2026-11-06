@@ -1,0 +1,164 @@
+<div class="forecasting-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">AI Demand Forecasting & Replenishment</h1>
+      <p class="page-subtitle">Machine learning regression engine predicting future sales velocity and calculating safety replenishment buffers</p>
+    </div>
+  </div>
+
+  <!-- Parameter Configuration Form Card -->
+  <div class="config-card">
+    <div class="config-grid">
+      <div class="config-group flex-2">
+        <label>Select Product to Forecast *</label>
+        <select [(ngModel)]="selectedProductId" [disabled]="loading">
+          <option *ngFor="let p of products" [ngValue]="p.id">
+            {{ p.name }} (SKU: {{ p.sku }}) — Current Stock: {{ p.currentStock }} {{ p.unit }}
+          </option>
+        </select>
+      </div>
+
+      <div class="config-group flex-1">
+        <label>Forecast Horizon</label>
+        <select [(ngModel)]="daysToForecast" [disabled]="loading">
+          <option [ngValue]="7">Next 7 Days (Weekly)</option>
+          <option [ngValue]="14">Next 14 Days (Bi-Weekly)</option>
+          <option [ngValue]="30">Next 30 Days (Monthly)</option>
+        </select>
+      </div>
+
+      <div class="config-group flex-1">
+        <label>Supplier Lead Time (Days)</label>
+        <input type="number" [(ngModel)]="leadTimeDays" min="1" max="30" [disabled]="loading" />
+      </div>
+
+      <div class="config-actions">
+        <button class="btn btn-primary" (click)="runForecast()" [disabled]="loading || !selectedProductId">
+          <span *ngIf="!loading">🤖 Run AI Prediction</span>
+          <span *ngIf="loading">Training Model...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success/Error Alerts -->
+  <div class="alert success" *ngIf="poSuccessMessage">
+    ✅ {{ poSuccessMessage }}
+  </div>
+  <div class="alert error" *ngIf="errorMessage">
+    ⚠️ {{ errorMessage }}
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Feeding historical sales records into Scikit-learn regression model...</p>
+  </div>
+
+  <!-- Forecast Output Views -->
+  <div class="results-container" *ngIf="!loading && forecastResult">
+    <!-- Top Summary Banner -->
+    <div class="forecast-banner">
+      <div class="banner-left">
+        <span class="product-badge">{{ forecastResult.productSku }}</span>
+        <h2 class="banner-product-name">{{ forecastResult.productName }}</h2>
+        <span class="engine-badge" [class.python]="forecastResult.sourceService === 'PYTHON_AI_ENGINE'">
+          Engine: {{ forecastResult.sourceService === 'PYTHON_AI_ENGINE' ? 'Python Flask (Scikit-learn)' : 'Java Moving Average Fallback' }}
+        </span>
+      </div>
+
+      <div class="banner-stat">
+        <span class="stat-caption">Total Predicted Demand</span>
+        <span class="stat-number">{{ forecastResult.totalPredictedDemand }} <small>units</small></span>
+        <span class="stat-sub">Across next {{ forecastResult.forecastPeriodDays }} days</span>
+      </div>
+    </div>
+
+    <!-- Chart + Recommendations Grid -->
+    <div class="results-grid">
+      <!-- Chart Card -->
+      <div class="card flex-2">
+        <div class="card-header">
+          <h3 class="card-title">📈 Projected Daily Consumption Curve</h3>
+          <span class="card-caption">Day-by-day machine learning unit projections</span>
+        </div>
+        <div class="canvas-wrapper">
+          <canvas #forecastChartCanvas></canvas>
+        </div>
+      </div>
+
+      <!-- Restock Recommendation Card -->
+      <div class="card flex-1 recommendation-card" *ngIf="forecastResult.restockingRecommendation as restock">
+        <div class="card-header">
+          <h3 class="card-title">📦 Restocking Recommendation</h3>
+          <span class="urgency-pill" [attr.data-urgency]="restock.restockUrgency">
+            {{ restock.restockUrgency }} URGENCY
+          </span>
+        </div>
+
+        <div class="restock-details">
+          <div class="metric-row">
+            <span>Current Warehouse Stock:</span>
+            <strong>{{ restock.currentWarehouseStock }} units</strong>
+          </div>
+          <div class="metric-row">
+            <span>Demand During Lead Time ({{ restock.leadTimeDays }}d):</span>
+            <strong>{{ restock.predictedDemandDuringLeadTime }} units</strong>
+          </div>
+          <div class="metric-row">
+            <span>Safety Stock Buffer:</span>
+            <strong>+{{ restock.safetyStockBuffer }} units</strong>
+          </div>
+          <div class="divider"></div>
+          <div class="metric-row highlight">
+            <span>Recommended Order:</span>
+            <span class="recommended-number">{{ restock.recommendedOrderQuantity }} units</span>
+          </div>
+
+          <p class="formula-explanation">
+            <em>Formula:</em> max(0, Lead Time Demand + Safety Stock - Current Stock - On Order)
+          </p>
+
+          <p class="explanation-text">{{ restock.explanation }}</p>
+
+          <button
+            class="btn btn-emerald full-width"
+            (click)="createPoFromSuggestion()"
+            [disabled]="creatingPO || restock.recommendedOrderQuantity <= 0"
+          >
+            <span *ngIf="!creatingPO">📋 Generate Purchase Order ({{ restock.recommendedOrderQuantity }} units)</span>
+            <span *ngIf="creatingPO">Creating Purchase Order...</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Model Evaluation & Assumptions Card -->
+    <div class="card evaluation-card" *ngIf="forecastResult.modelEvaluation as eval">
+      <h3 class="card-title">🔬 Transparent Model Evaluation & Benchmarks</h3>
+      <div class="eval-grid">
+        <div class="eval-item">
+          <span class="eval-label">Model Architecture</span>
+          <span class="eval-val">{{ eval.modelType }}</span>
+        </div>
+        <div class="eval-item" *ngIf="eval.meanAbsoluteError !== undefined">
+          <span class="eval-label">Mean Absolute Error (MAE)</span>
+          <span class="eval-val font-mono">{{ eval.meanAbsoluteError }} units</span>
+        </div>
+        <div class="eval-item" *ngIf="eval.baselineMovingAverageMae !== undefined">
+          <span class="eval-label">Baseline (SMA) MAE</span>
+          <span class="eval-val font-mono">{{ eval.baselineMovingAverageMae }} units</span>
+        </div>
+        <div class="eval-item">
+          <span class="eval-label">Evaluation Summary</span>
+          <span class="eval-val note">{{ eval.modelAccuracyNote }}</span>
+        </div>
+      </div>
+
+      <div class="limitations-box" *ngIf="forecastResult.limitationsNote">
+        <strong>⚠️ Model Limitations:</strong> {{ forecastResult.limitationsNote }}
+      </div>
+    </div>
+  </div>
+</div>

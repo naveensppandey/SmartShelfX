@@ -1,0 +1,138 @@
+<div class="users-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">User Management</h1>
+      <p class="page-subtitle">Manage administrative, warehouse manager, and vendor user accounts</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-outline" (click)="loadUsers()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div class="alert alert-success" *ngIf="successMessage">
+    {{ successMessage }}
+  </div>
+  <div class="alert alert-danger" *ngIf="error">
+    {{ error }}
+  </div>
+
+  <!-- Role Overview Cards -->
+  <div class="role-cards-grid">
+    <div class="role-card">
+      <span class="role-badge badge-admin">ADMIN</span>
+      <h4>System Administrator</h4>
+      <p>Full control over products, categories, stock transactions, purchase order approval, and user status.</p>
+    </div>
+
+    <div class="role-card">
+      <span class="role-badge badge-manager">WAREHOUSE_MANAGER</span>
+      <h4>Warehouse Operations</h4>
+      <p>Manages stock-in/stock-out movements, views inventory valuation, and creates/receives purchase orders.</p>
+    </div>
+
+    <div class="role-card">
+      <span class="role-badge badge-vendor">VENDOR</span>
+      <h4>Supplier / Vendor</h4>
+      <p>External partner view with read access to product catalog and purchase orders assigned to their supply line.</p>
+    </div>
+  </div>
+
+  <!-- Search & Role Filter -->
+  <div class="filter-card">
+    <div class="search-box">
+      <input
+        type="text"
+        placeholder="Search by name, username or email..."
+        [(ngModel)]="searchTerm"
+        (input)="applyFilter()"
+      />
+    </div>
+
+    <div class="role-filters">
+      <button
+        class="chip"
+        [class.active]="roleFilter === 'ALL'"
+        (click)="roleFilter = 'ALL'; applyFilter()"
+      >
+        All Users ({{ users.length }})
+      </button>
+      <button
+        class="chip"
+        [class.active]="roleFilter === 'ADMIN'"
+        (click)="roleFilter = 'ADMIN'; applyFilter()"
+      >
+        Admin
+      </button>
+      <button
+        class="chip"
+        [class.active]="roleFilter === 'WAREHOUSE_MANAGER'"
+        (click)="roleFilter = 'WAREHOUSE_MANAGER'; applyFilter()"
+      >
+        Manager
+      </button>
+      <button
+        class="chip"
+        [class.active]="roleFilter === 'VENDOR'"
+        (click)="roleFilter = 'VENDOR'; applyFilter()"
+      >
+        Vendor
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="card loading-state">
+    <div class="spinner"></div>
+    <p>Loading user accounts...</p>
+  </div>
+
+  <!-- Users Table -->
+  <div class="card" *ngIf="!loading">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Full Name</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Account Status</th>
+            <th>Joined Date</th>
+            <th *ngIf="isAdmin">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let u of filteredUsers">
+            <td>
+              <strong>{{ u.fullName }}</strong>
+              <span class="you-tag" *ngIf="u.id === currentUserId">(You)</span>
+            </td>
+            <td><code>{{ u.username }}</code></td>
+            <td>{{ u.email }}</td>
+            <td>
+              <span class="role-badge" [class]="'badge-' + u.role.toLowerCase()">
+                {{ u.role }}
+              </span>
+            </td>
+            <td>
+              <span class="status-indicator" [class.active]="u.enabled">
+                {{ u.enabled ? 'Active' : 'Disabled' }}
+              </span>
+            </td>
+            <td>{{ u.createdAt | date: 'mediumDate' }}</td>
+            <td *ngIf="isAdmin">
+              <button
+                class="btn-action"
+                [class.btn-action-danger]="u.enabled"
+                [disabled]="u.id === currentUserId"
+                (click)="toggleStatus(u)"
+              >
+                {{ u.enabled ? 'Deactivate' : 'Activate' }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

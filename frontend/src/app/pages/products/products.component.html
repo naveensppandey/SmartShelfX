@@ -1,0 +1,148 @@
+<div class="products-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Inventory Products</h1>
+      <p class="page-subtitle">Manage warehouse catalog, SKU identification, prices, and stock balances</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/products/new" class="btn btn-primary">+ Add New Product</a>
+    </div>
+  </div>
+
+  <!-- Success/Error Alerts -->
+  <div class="alert success" *ngIf="successMessage">
+    ✅ {{ successMessage }}
+  </div>
+  <div class="alert error" *ngIf="errorMessage">
+    ⚠️ {{ errorMessage }}
+  </div>
+
+  <!-- Search and Filtering Toolbar -->
+  <div class="filter-card">
+    <div class="filter-group">
+      <label>Search Product</label>
+      <input
+        type="text"
+        [(ngModel)]="searchKeyword"
+        (input)="onFilterChange()"
+        placeholder="Search by name or SKU..."
+      />
+    </div>
+
+    <div class="filter-group">
+      <label>Category</label>
+      <select [(ngModel)]="selectedCategoryId" (change)="onFilterChange()">
+        <option [ngValue]="null">All Categories</option>
+        <option *ngFor="let cat of categories" [ngValue]="cat.id">{{ cat.name }}</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Stock Status</label>
+      <select [(ngModel)]="selectedStockStatus" (change)="onFilterChange()">
+        <option value="ALL">All Statuses</option>
+        <option value="IN_STOCK">In Stock (Healthy)</option>
+        <option value="LOW_STOCK">Low Stock (≤ Threshold)</option>
+        <option value="OUT_OF_STOCK">Out of Stock (Zero)</option>
+      </select>
+    </div>
+
+    <div class="filter-actions">
+      <button class="btn btn-secondary" (click)="resetFilters()">Clear Filters</button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading catalog from database...</p>
+  </div>
+
+  <!-- Products Table Card -->
+  <div class="table-card" *ngIf="!loading">
+    <div class="table-responsive" *ngIf="products.length > 0; else noProducts">
+      <table class="products-table">
+        <thead>
+          <tr>
+            <th>Product Name</th>
+            <th>SKU</th>
+            <th>Category</th>
+            <th>Selling Price</th>
+            <th>Cost Price</th>
+            <th>Current Stock</th>
+            <th>Status</th>
+            <th>Inventory Value</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of products">
+            <td>
+              <div class="product-title-cell">
+                <span class="product-name">{{ p.name }}</span>
+                <span class="product-desc" *ngIf="p.description">{{ p.description | slice:0:45 }}...</span>
+              </div>
+            </td>
+            <td><code>{{ p.sku }}</code></td>
+            <td><span class="category-chip">{{ p.categoryName || 'Uncategorized' }}</span></td>
+            <td class="font-bold">${{ p.price | number:'1.2-2' }}</td>
+            <td class="text-muted">${{ p.costPrice | number:'1.2-2' }}</td>
+            <td>
+              <span class="stock-num" [class.zero]="p.currentStock <= 0" [class.low]="p.stockStatus === 'LOW_STOCK'">
+                {{ p.currentStock }} {{ p.unit }}
+              </span>
+            </td>
+            <td>
+              <span class="status-badge" [attr.data-status]="p.stockStatus">
+                {{ p.stockStatus | titlecase }}
+              </span>
+            </td>
+            <td class="font-bold text-slate">${{ p.totalInventoryValue | number:'1.2-2' }}</td>
+            <td class="text-right actions-cell">
+              <a [routerLink]="['/forecasting']" [queryParams]="{ productId: p.id }" class="icon-link ai" title="Run AI Demand Forecast">
+                🤖 Forecast
+              </a>
+              <a [routerLink]="['/products/edit', p.id]" class="icon-link edit" title="Edit Product">
+                ✏️ Edit
+              </a>
+              <button class="icon-link delete" (click)="confirmDelete(p)" title="Delete Product">
+                🗑️
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-template #noProducts>
+      <div class="empty-state">
+        <span class="empty-icon">📦</span>
+        <h3>No Products Found</h3>
+        <p>No inventory items matched your search and filter criteria.</p>
+        <button class="btn btn-primary" routerLink="/products/new">+ Add Your First Product</button>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Delete Confirmation Modal Dialog -->
+  <div class="modal-backdrop" *ngIf="productToDelete">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Confirm Product Deletion</h3>
+        <button class="close-btn" (click)="cancelDelete()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete product <strong>"{{ productToDelete.name }}"</strong> (SKU: <code>{{ productToDelete.sku }}</code>)?</p>
+        <p class="warning-text">⚠️ This action will remove the item from the catalog permanently.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="cancelDelete()" [disabled]="deleting">Cancel</button>
+        <button class="btn btn-danger" (click)="executeDelete()" [disabled]="deleting">
+          <span *ngIf="!deleting">Delete Product</span>
+          <span *ngIf="deleting">Deleting...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

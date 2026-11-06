@@ -1,0 +1,188 @@
+<div class="dashboard-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Operational Dashboard</h1>
+      <p class="page-subtitle">Real-time inventory levels, valuation, and procurement activity</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/transactions" class="btn btn-secondary">Record Movement</a>
+      <a routerLink="/products/new" class="btn btn-primary">+ Add New Product</a>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading real-time inventory metrics from MySQL...</p>
+  </div>
+
+  <!-- Error Alert -->
+  <div class="alert error" *ngIf="errorMessage && !loading">
+    ⚠️ {{ errorMessage }}
+  </div>
+
+  <div *ngIf="!loading && stats">
+    <!-- Stat Cards Grid -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon bg-blue">📦</div>
+        <div class="stat-info">
+          <span class="stat-label">Total Products</span>
+          <span class="stat-value">{{ stats.totalProducts }}</span>
+          <span class="stat-sub">Across {{ stats.totalCategories }} categories</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon bg-emerald">💰</div>
+        <div class="stat-info">
+          <span class="stat-label">Total Valuation</span>
+          <span class="stat-value">${{ stats.totalInventoryValue | number:'1.2-2' }}</span>
+          <span class="stat-sub">Current physical stock</span>
+        </div>
+      </div>
+
+      <div class="stat-card" [class.highlight-warning]="stats.lowStockCount > 0">
+        <div class="stat-icon bg-amber">⚠️</div>
+        <div class="stat-info">
+          <span class="stat-label">Low Stock Items</span>
+          <span class="stat-value text-amber">{{ stats.lowStockCount }}</span>
+          <span class="stat-sub">At or below reorder level</span>
+        </div>
+      </div>
+
+      <div class="stat-card" [class.highlight-danger]="stats.outOfStockCount > 0">
+        <div class="stat-icon bg-rose">🚫</div>
+        <div class="stat-info">
+          <span class="stat-label">Out of Stock</span>
+          <span class="stat-value text-rose">{{ stats.outOfStockCount }}</span>
+          <span class="stat-sub">Requires immediate restock</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon bg-purple">📋</div>
+        <div class="stat-info">
+          <span class="stat-label">Pending POs</span>
+          <span class="stat-value">{{ stats.pendingOrdersCount }}</span>
+          <span class="stat-sub">Awaiting warehouse approval</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics Charts Row -->
+    <div class="charts-row">
+      <div class="chart-card flex-2">
+        <div class="card-title-box">
+          <h3 class="card-title">14-Day Stock Movement Velocity</h3>
+          <span class="card-caption">Comparison of units incoming (Stock-In) vs outgoing (Stock-Out)</span>
+        </div>
+        <div class="canvas-container">
+          <canvas #trendChartCanvas></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card flex-1">
+        <div class="card-title-box">
+          <h3 class="card-title">Category Distribution</h3>
+          <span class="card-caption">Inventory items by category</span>
+        </div>
+        <div class="canvas-container">
+          <canvas #categoryChartCanvas></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tables Row: Low Stock Warnings & Recent Transactions -->
+    <div class="data-tables-row">
+      <!-- Low Stock Alerts Table -->
+      <div class="panel-card flex-1">
+        <div class="panel-header">
+          <h3 class="panel-title">🚨 Urgent Stock Replenishment Needed</h3>
+          <a routerLink="/purchase-orders" class="link-btn">View All Suggestions</a>
+        </div>
+
+        <div class="table-responsive" *ngIf="stats.lowStockProducts.length; else emptyLowStock">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>SKU</th>
+                <th>Current</th>
+                <th>Threshold</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of stats.lowStockProducts">
+                <td class="font-bold">{{ p.name }}</td>
+                <td><code>{{ p.sku }}</code></td>
+                <td>
+                  <span class="stock-badge" [class.zero]="p.currentStock <= 0">
+                    {{ p.currentStock }} {{ p.unit }}
+                  </span>
+                </td>
+                <td>{{ p.minStockThreshold }} {{ p.unit }}</td>
+                <td>
+                  <a [routerLink]="['/forecasting']" [queryParams]="{ productId: p.id }" class="action-btn">
+                    Forecast
+                  </a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ng-template #emptyLowStock>
+          <div class="empty-state">
+            <span class="empty-icon">✅</span>
+            <p>All products are safely above minimum thresholds.</p>
+          </div>
+        </ng-template>
+      </div>
+
+      <!-- Recent Transactions Activity -->
+      <div class="panel-card flex-1">
+        <div class="panel-header">
+          <h3 class="panel-title">🔄 Recent Stock Movements</h3>
+          <a routerLink="/transactions" class="link-btn">Full Audit Log</a>
+        </div>
+
+        <div class="table-responsive" *ngIf="stats.recentTransactions.length; else emptyTx">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Type</th>
+                <th>Quantity</th>
+                <th>New Balance</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let tx of stats.recentTransactions">
+                <td>{{ tx.productName }}</td>
+                <td>
+                  <span class="type-pill" [class.in]="tx.transactionType === 'IN'" [class.out]="tx.transactionType === 'OUT'">
+                    {{ tx.transactionType }}
+                  </span>
+                </td>
+                <td class="font-bold">{{ tx.quantity }}</td>
+                <td>{{ tx.newStock }}</td>
+                <td class="text-muted">{{ tx.transactionDate | date:'short' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ng-template #emptyTx>
+          <div class="empty-state">
+            <span class="empty-icon">📝</span>
+            <p>No transactions recorded yet.</p>
+          </div>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+</div>

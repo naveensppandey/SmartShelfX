@@ -1,0 +1,108 @@
+<div class="analytics-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Inventory Analytics & Reports</h1>
+      <p class="page-subtitle">Deep dive into financial valuation, stock health metrics, and catalog distribution</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-outline" (click)="loadData()">↻ Refresh</button>
+      <button class="btn btn-primary" (click)="printReport()">🖨 Export / Print Report</button>
+    </div>
+  </div>
+
+  <div class="alert alert-danger" *ngIf="error">
+    {{ error }}
+  </div>
+
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Calculating inventory analytics...</p>
+  </div>
+
+  <div *ngIf="!loading && stats" class="analytics-content">
+    <!-- Key Financial & Quantity Highlights -->
+    <div class="metrics-grid">
+      <div class="stat-card">
+        <span class="stat-label">Total Inventory Valuation</span>
+        <span class="stat-value text-primary">${{ stats.totalInventoryValue | number: '1.2-2' }}</span>
+        <span class="stat-hint">Based on current stock × selling price</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Total Physical Units</span>
+        <span class="stat-value">{{ totalUnitsInStock | number }}</span>
+        <span class="stat-hint">Across {{ stats.totalProducts }} unique SKUs</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Average Unit Price</span>
+        <span class="stat-value">${{ averageProductPrice | number: '1.2-2' }}</span>
+        <span class="stat-hint">Catalog catalog mean</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Stock Health Issues</span>
+        <span class="stat-value text-warn">{{ stats.lowStockCount + stats.outOfStockCount }}</span>
+        <span class="stat-hint">{{ stats.outOfStockCount }} out of stock, {{ stats.lowStockCount }} low</span>
+      </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Inventory Valuation by Category</h3>
+          <span class="subtitle">Dollar breakdown across product lines</span>
+        </div>
+        <div class="canvas-wrapper">
+          <canvas #categoryValuationCanvas></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Catalog Stock Health Distribution</h3>
+          <span class="subtitle">Healthy vs low stock vs depleted</span>
+        </div>
+        <div class="canvas-wrapper">
+          <canvas #stockHealthCanvas></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top 5 Highest Value Assets in Warehouse -->
+    <div class="table-card">
+      <div class="card-header">
+        <h3>Top Capital Assets by Inventory Value</h3>
+        <p class="card-subtitle">Products holding the highest tied capital in the warehouse</p>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Product Name</th>
+              <th>SKU</th>
+              <th>Category</th>
+              <th>Current Stock</th>
+              <th>Selling Price</th>
+              <th>Total Asset Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of topValueProducts; let i = index">
+              <td><strong>#{{ i + 1 }}</strong></td>
+              <td><strong>{{ p.name }}</strong></td>
+              <td><code>{{ p.sku }}</code></td>
+              <td>{{ p.categoryName || 'General' }}</td>
+              <td>{{ p.currentStock }} {{ p.unit }}</td>
+              <td>${{ p.price | number: '1.2-2' }}</td>
+              <td class="asset-val"><strong>${{ p.totalInventoryValue | number: '1.2-2' }}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

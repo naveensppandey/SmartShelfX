@@ -1,0 +1,105 @@
+<div class="notifications-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Notifications & System Alerts</h1>
+      <p class="page-subtitle">Real-time alerts triggered by stock thresholds and inventory changes</p>
+    </div>
+    <div class="actions">
+      <button
+        class="btn btn-outline"
+        [disabled]="getUnreadCount() === 0"
+        (click)="markAllAsRead()"
+      >
+        ✓ Mark All as Read
+      </button>
+      <button class="btn btn-outline" (click)="loadNotifications()">
+        ↻ Refresh
+      </button>
+    </div>
+  </div>
+
+  <div class="alert alert-danger" *ngIf="error">
+    {{ error }}
+  </div>
+
+  <!-- Filter Buttons -->
+  <div class="filter-bar">
+    <button
+      class="chip"
+      [class.active]="filter === 'ALL'"
+      (click)="setFilter('ALL')"
+    >
+      All Alerts ({{ notifications.length }})
+    </button>
+    <button
+      class="chip"
+      [class.active]="filter === 'UNREAD'"
+      (click)="setFilter('UNREAD')"
+    >
+      Unread ({{ getUnreadCount() }})
+    </button>
+    <button
+      class="chip"
+      [class.active]="filter === 'READ'"
+      (click)="setFilter('READ')"
+    >
+      Read ({{ notifications.length - getUnreadCount() }})
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading alerts...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && filteredNotifications.length === 0" class="card empty-state">
+    <div class="empty-icon">🔔</div>
+    <h3>No notifications</h3>
+    <p>You have no notifications matching the selected filter.</p>
+  </div>
+
+  <!-- Notifications List -->
+  <div *ngIf="!loading && filteredNotifications.length > 0" class="notifications-list">
+    <div
+      class="notification-card"
+      *ngFor="let item of filteredNotifications"
+      [class.unread]="!item.read"
+    >
+      <div class="icon-column">
+        <span class="type-icon type-{{ item.type.toLowerCase() }}">
+          <ng-container [ngSwitch]="item.type">
+            <span *ngSwitchCase="'OUT_OF_STOCK'">⛔</span>
+            <span *ngSwitchCase="'LOW_STOCK'">⚠️</span>
+            <span *ngSwitchCase="'ORDER_UPDATE'">📦</span>
+            <span *ngSwitchDefault>ℹ️</span>
+          </ng-container>
+        </span>
+      </div>
+
+      <div class="content-column">
+        <div class="top-row">
+          <div class="title-wrap">
+            <span class="badge badge-{{ item.type.toLowerCase() }}">{{ item.type }}</span>
+            <strong class="item-title">{{ item.title }}</strong>
+          </div>
+          <span class="date-text">{{ item.createdAt | date: 'medium' }}</span>
+        </div>
+        <p class="item-message">{{ item.message }}</p>
+      </div>
+
+      <div class="action-column">
+        <button
+          *ngIf="!item.read"
+          class="btn-mark-read"
+          (click)="markAsRead(item)"
+          title="Mark as read"
+        >
+          ✓ Mark Read
+        </button>
+        <span *ngIf="item.read" class="read-status">Read</span>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,146 @@
+<div class="product-form-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">{{ isEditMode ? 'Edit Product' : 'Add New Inventory Product' }}</h1>
+      <p class="page-subtitle">Configure SKU identification, commercial pricing, and warehouse threshold logic</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/products" class="btn btn-secondary">← Back to Catalog</a>
+    </div>
+  </div>
+
+  <!-- Success/Error Alerts -->
+  <div class="alert success" *ngIf="successMessage">
+    ✅ {{ successMessage }}
+  </div>
+  <div class="alert error" *ngIf="errorMessage">
+    ⚠️ {{ errorMessage }}
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading product details from database...</p>
+  </div>
+
+  <!-- Form Card -->
+  <div class="form-card" *ngIf="!loading">
+    <form [formGroup]="productForm" (ngSubmit)="onSubmit()">
+      <!-- Section 1: Basic Identity -->
+      <div class="form-section">
+        <h3 class="section-title">1. Product Identification</h3>
+        <div class="form-grid">
+          <div class="form-group span-2">
+            <label>Product Name *</label>
+            <input type="text" formControlName="name" placeholder="e.g. Logitech MX Master 3S Wireless Mouse" />
+            <span class="field-error" *ngIf="productForm.get('name')?.touched && productForm.get('name')?.invalid">
+              Product name is required (min 2 characters).
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label>SKU (Stock Keeping Unit) *</label>
+            <input type="text" formControlName="sku" placeholder="e.g. MOU-LOGI-001" style="text-transform: uppercase;" />
+            <span class="field-error" *ngIf="productForm.get('sku')?.touched && productForm.get('sku')?.invalid">
+              Unique SKU required (letters, numbers, dashes only).
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label>Category *</label>
+            <select formControlName="categoryId">
+              <option value="" disabled>Select category</option>
+              <option *ngFor="let cat of categories" [value]="cat.id">{{ cat.name }}</option>
+            </select>
+            <span class="field-error" *ngIf="productForm.get('categoryId')?.touched && productForm.get('categoryId')?.invalid">
+              Category selection is required.
+            </span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 14px;">
+          <label>Product Description</label>
+          <textarea formControlName="description" rows="3" placeholder="Enter specifications, features, or vendor model notes..."></textarea>
+        </div>
+      </div>
+
+      <!-- Section 2: Financial Pricing -->
+      <div class="form-section">
+        <h3 class="section-title">2. Commercial & Cost Pricing</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Selling Price ($ USD) *</label>
+            <input type="number" step="0.01" formControlName="price" placeholder="e.g. 99.99" />
+            <span class="field-error" *ngIf="productForm.get('price')?.touched && productForm.get('price')?.invalid">
+              Selling price must be greater than zero.
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label>Purchase Cost Price ($ USD) *</label>
+            <input type="number" step="0.01" formControlName="costPrice" placeholder="e.g. 65.00" />
+            <span class="field-error" *ngIf="productForm.get('costPrice')?.touched && productForm.get('costPrice')?.invalid">
+              Cost price must be greater than zero.
+            </span>
+          </div>
+
+          <div class="form-group span-2">
+            <label>Supplier / Vendor Name</label>
+            <input type="text" formControlName="vendorName" placeholder="e.g. Logitech Global Supply Chain" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Warehouse Stock & Thresholds -->
+      <div class="form-section">
+        <h3 class="section-title">3. Inventory Stock & Restock Thresholds</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Current Physical Stock *</label>
+            <input type="number" formControlName="currentStock" placeholder="0" />
+            <span class="field-error" *ngIf="productForm.get('currentStock')?.touched && productForm.get('currentStock')?.invalid">
+              Current stock cannot be negative.
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label>Minimum Stock Threshold (Alert Level) *</label>
+            <input type="number" formControlName="minStockThreshold" placeholder="10" />
+            <span class="field-error" *ngIf="productForm.get('minStockThreshold')?.touched && productForm.get('minStockThreshold')?.invalid">
+              Threshold cannot be negative.
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label>Standard Reorder Batch Quantity *</label>
+            <input type="number" formControlName="reorderQuantity" placeholder="50" />
+            <span class="field-error" *ngIf="productForm.get('reorderQuantity')?.touched && productForm.get('reorderQuantity')?.invalid">
+              Reorder quantity must be at least 1 unit.
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label>Unit of Measure *</label>
+            <select formControlName="unit">
+              <option value="pcs">Pieces (pcs)</option>
+              <option value="box">Box (box)</option>
+              <option value="kg">Kilograms (kg)</option>
+              <option value="set">Set (set)</option>
+              <option value="pack">Pack (pack)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="form-actions">
+        <a routerLink="/products" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary" [disabled]="submitting">
+          <span *ngIf="!submitting">{{ isEditMode ? 'Save Product Changes' : 'Create Product' }}</span>
+          <span *ngIf="submitting">Saving to Database...</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

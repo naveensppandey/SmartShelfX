@@ -1,0 +1,70 @@
+# ==============================================================
+# SmartShelfX — Root .gitignore
+# Excludes build artifacts, virtual environments, dependencies
+# ==============================================================
+
+# --- Java & Maven ---
+**/target/
+**/*.class
+**/*.jar
+**/*.war
+**/*.ear
+**/*.nar
+**/hs_err_pid*
+replay_pid*
+
+# --- Python ---
+**/.venv/
+**/venv/
+**/ENV/
+**/env/
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/.pytest_cache/
+**/.coverage
+**/htmlcov/
+**/*.egg-info/
+**/*.egg
+**/*.dist-info/
+
+# --- Angular & Node.js ---
+**/node_modules/
+**/.angular/
+**/dist/
+**/out-tsc/
+**/bazel-out/
+**/coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- IDEs & Editors ---
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.settings/
+.project
+.classpath
+*.sublime-workspace
+*.sublime-project
+
+# --- Operating System Files ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.tmp
+*.bak
+*.swp
+*~
+
+# --- Local & Environment Files ---
+*.local
+.env
+.env.local
